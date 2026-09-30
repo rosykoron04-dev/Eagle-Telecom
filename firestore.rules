@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && (get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin'
+            || get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true);
+    }
+
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if isAdmin();
+    }
+
+    match /users/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow update: if isAdmin()
+        || (signedIn() && request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['name','phone','passwordHash','updatedAt','userId']));
+      allow delete: if isAdmin();
+    }
+
+    match /transactions/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isAdmin() || (signedIn() && request.resource.data.uid == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    match /depositRequests/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /groupChatMessages/{id} {
+      allow read: if isAdmin() || (signedIn() &&
+        (resource.data.status == 'APPROVED' || resource.data.status == 'Approved' || resource.data.uid == request.auth.uid));
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+        && (request.resource.data.status == 'PENDING' || request.resource.data.status == 'Pending');
+      allow update, delete: if isAdmin();
+    }
+
+    match /chatMessages/{id} {
+      allow read: if isAdmin() || (signedIn() &&
+        (resource.data.status == 'APPROVED' || resource.data.status == 'Approved' || resource.data.uid == request.auth.uid));
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+        && (request.resource.data.status == 'PENDING' || request.resource.data.status == 'Pending');
+      allow update, delete: if isAdmin();
+    }
+
+    match /billPayRequests/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+    match /bankTransferRequests/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+    match /mobileBankingRequests/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+    match /rechargeRequests/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+    match /specialOfferRequests/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /offers/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /liveActivities/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /reviews/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /tutorials/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /settings/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /publicSettings/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
